@@ -110,10 +110,10 @@ class DB_set_up:
         # self.connection.commit()
 
     def login(self):
-        username = input("Please enter your user_name\t")
-        password = input("Please enter your password\t")
-        # username = 'shoaib'
-        # password = '123456'
+        # username = input("Please enter your user_name\t")
+        # password = input("Please enter your password\t")
+        username = 'shoaib'
+        password = '123456'
         cursor = self.connection.cursor()
         query = f"""SELECT *
                     FROM User
@@ -144,7 +144,7 @@ class Buy(DB_set_up):
         cursor.execute(query)
 
         print("\nPlease select a category")
-        print("category_id category_name")
+        print("category_id | category_name")
         for (cat_id, cat_name, _) in cursor:
             print(cat_id, cat_name)
 
@@ -180,9 +180,9 @@ class Buy(DB_set_up):
                 quit()
         else:
             prod_id = int(input("Enter the product id to see it details  "))
-            self.detail_product(prod_id)
+            self.detail_product(prod_id, category_id)
 
-    def detail_product(self, prod_id):
+    def detail_product(self, prod_id, category_id):
         cursor = self.connection.cursor()
         query = """ SELECT *
                     FROM Product
@@ -192,11 +192,14 @@ class Buy(DB_set_up):
         r = cursor.fetchone()
         print(f'ID = {r[0]}, NAME = {r[1]}, price = {r[2]}')
         c = input("Do you want to add this item cart.")
+
         if c.lower() in ['y', 'yes', 'yaa']:
+            print("\nCURRENT ITEMS IN CART::")
+            self.view_cart()
             quantity = int(input("Quantity ??"))
             self.add_to_cart(prod_id, quantity)
         else:
-            pass
+            self.list_all_products(category_id)
 
     def add_to_cart(self, prod_id, quantity=1):
         cursor = self.connection.cursor()
@@ -238,6 +241,20 @@ class Buy(DB_set_up):
             cursor.execute(query)
             self.connection.commit()
 
+    def view_cart(self):
+        cursor = self.connection.cursor()
+        query = f"""SELECT p.product_id, p.product_name, cp.quantity FROM Cart as c
+                    JOIN cart_product as cp ON c.cart_id=cp.cart_id
+                    JOIN Product as p ON cp.product_id=p.product_id
+                    WHERE c.user_id={self.user_id}
+                """
+        cursor.execute(query)
+
+        for row in cursor:
+            print(row)
+
+    def remove_from_cart(self):
+        pass
 
 o = Buy()
 if o.is_admin:
