@@ -361,6 +361,10 @@ class Buy(DB_set_up):
         cursor = self.connection.cursor()
         cursor.execute(query)
         self.connection.commit()
+        print(f"TOTAL PRICE = {total_amount}\nDiscount = -{discounted_amount}")
+        print(f"To pay = {total_amount - discounted_amount}")
+        print("\nThank you for shopping at MyCart.")
+        print("Have a Good Day.")
 
 o = Buy()
 if o.is_admin:
