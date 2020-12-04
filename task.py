@@ -59,7 +59,7 @@ class DB_set_up:
                         cart_prod_id int AUTO_INCREMENT,
                         cart_id int,
                         product_id int,
-                        quantity int default 0,
+                        quantity int default 0 CHECK (quantity >= 1),
                         PRIMARY KEY (cart_prod_id),
                         FOREIGN KEY (product_id) REFERENCES Product(product_id),
                         FOREIGN KEY (cart_id) REFERENCES Cart(cart_id)
@@ -71,6 +71,8 @@ class DB_set_up:
                         order_id int AUTO_INCREMENT,
                         user_id int,
                         order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        actual_amount DECIMAL CHECK (actual_amount >= 0) ,
+                        discounted_amount DECIMAL CHECK (discounted_amount >= 0),
                         PRIMARY KEY (order_id),
                         FOREIGN KEY (user_id) REFERENCES User(user_id)
                     )
@@ -108,6 +110,7 @@ class DB_set_up:
 
         cursor.execute(create_order_details_table)
         # self.connection.commit()
+        print("All tables created successfully")
 
     def login(self):
         # username = input("Please enter your user_name\t")
@@ -206,9 +209,10 @@ class Buy(DB_set_up):
         query = f"""SELECT cart_id FROM Cart WHERE user_id='{self.user_id}'"""
         cursor.execute(query)
         r = cursor.fetchone()
-        cart_id = r[0]
 
-        if not r:
+        if r:
+            cart_id = r[0]
+        else:
             #create a cart for the user if not exist
             query = f"""INSERT INTO Cart (user_id) VALUES ({self.user_id})"""
             cursor.execute(query)
@@ -267,8 +271,6 @@ class Buy(DB_set_up):
                 product_id = int(input("Enter the product id to remove"))
                 self.remove_from_cart(cart_id, product_id)
 
-
-
     def remove_from_cart(self, cart_id, product_id):
         cursor = self.connection.cursor()
         query = f"""DELETE FROM cart_product
@@ -278,6 +280,7 @@ class Buy(DB_set_up):
         cursor.execute(query)
         self.connection.commit()
         self.view_cart()
+
 
 o = Buy()
 if o.is_admin:
