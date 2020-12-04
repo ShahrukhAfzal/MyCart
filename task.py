@@ -182,12 +182,12 @@ class Buy(DB_set_up):
             prod_id = int(input("Enter the product id to see it details  "))
             self.detail_product(prod_id, category_id)
 
-    def detail_product(self, prod_id, category_id):
+    def detail_product(self, product_id, category_id):
         cursor = self.connection.cursor()
         query = """ SELECT *
                     FROM Product
                     WHERE product_id={}
-                """.format(prod_id)
+                """.format(product_id)
         cursor.execute(query)
         r = cursor.fetchone()
         print(f'ID = {r[0]}, NAME = {r[1]}, price = {r[2]}')
@@ -197,15 +197,14 @@ class Buy(DB_set_up):
             print("\nCURRENT ITEMS IN CART::")
             self.view_cart()
             quantity = int(input("Quantity ??"))
-            self.add_to_cart(prod_id, quantity)
+            self.add_to_cart(product_id, quantity)
         else:
             self.list_all_products(category_id)
 
-    def add_to_cart(self, prod_id, quantity=1):
+    def add_to_cart(self, product_id, quantity=1):
         cursor = self.connection.cursor()
         query = f"""SELECT cart_id FROM Cart WHERE user_id='{self.user_id}'"""
         cursor.execute(query)
-        # import pdb; pdb.set_trace();
         r = cursor.fetchone()
         cart_id = r[0]
 
@@ -219,7 +218,7 @@ class Buy(DB_set_up):
         query = f"""SELECT cart_prod_id, quantity
                     FROM cart_product
                     WHERE cart_id='{cart_id}'
-                    AND product_id='{prod_id}'
+                    AND product_id='{product_id}'
                 """
         cursor.execute(query)
         r = cursor.fetchone()
@@ -227,9 +226,9 @@ class Buy(DB_set_up):
         if r:
             # already have a cart add the product to it
             cart_prod_id = r[0]
-            avlbl_quantity = r[1]
+            available_quantity = r[1]
             query = f"""UPDATE cart_product
-                        SET quantity='{avlbl_quantity + quantity}'
+                        SET quantity='{available_quantity + quantity}'
                         WHERE cart_prod_id='{cart_prod_id}'
                     """
             cursor.execute(query)
@@ -237,28 +236,52 @@ class Buy(DB_set_up):
 
         else:
             query = f"""INSERT INTO cart_product (cart_id, product_id, quantity)
-                        VALUES ({cart_id}, {prod_id}, {quantity} )"""
+                        VALUES ({cart_id}, {product_id}, {quantity} )"""
             cursor.execute(query)
             self.connection.commit()
 
     def view_cart(self):
+        print("\nHello, This is your Cart.")
         cursor = self.connection.cursor()
-        query = f"""SELECT p.product_id, p.product_name, cp.quantity FROM Cart as c
+        query = f"""SELECT c.cart_id,
+                    p.product_id, p.product_name,
+                    cp.quantity
+                    FROM Cart as c
                     JOIN cart_product as cp ON c.cart_id=cp.cart_id
                     JOIN Product as p ON cp.product_id=p.product_id
                     WHERE c.user_id={self.user_id}
                 """
         cursor.execute(query)
 
+        is_empty = True
         for row in cursor:
+            is_empty = False
             print(row)
 
-    def remove_from_cart(self):
-        pass
+        if not is_empty:
+            cart_id = row[0]
+            print("Do you want to remove any item from the Cart ??")
+            c = input("Press y for yes... else for no")
+
+            if c.lower() in ['y', 'yes', 'yaa']:
+                product_id = int(input("Enter the product id to remove"))
+                self.remove_from_cart(cart_id, product_id)
+
+
+
+    def remove_from_cart(self, cart_id, product_id):
+        cursor = self.connection.cursor()
+        query = f"""DELETE FROM cart_product
+                    WHERE cart_id={cart_id}
+                    AND product_id={product_id};
+                """
+        cursor.execute(query)
+        self.connection.commit()
+        self.view_cart()
 
 o = Buy()
 if o.is_admin:
     pass
 else:
-    cat_id = o.list_all_categories()
-    o.list_all_products(cat_id)
+    category_id = o.list_all_categories()
+    o.list_all_products(category_id)
