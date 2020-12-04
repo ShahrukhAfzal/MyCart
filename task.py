@@ -237,19 +237,20 @@ class Buy(DB_set_up):
                     """
             cursor.execute(query)
             self.connection.commit()
-
         else:
             query = f"""INSERT INTO cart_product (cart_id, product_id, quantity)
                         VALUES ({cart_id}, {product_id}, {quantity} )"""
             cursor.execute(query)
             self.connection.commit()
+        self.buy_from_cart()
 
     def view_cart(self):
         print("\nHello, This is your Cart.")
         cursor = self.connection.cursor()
         query = f"""SELECT c.cart_id,
-                    p.product_id, p.product_name,
-                    cp.quantity
+                    p.product_id, p.product_name, p.product_price,
+                    cp.quantity,
+                    (p.product_price * cp.quantity) AS total_price
                     FROM Cart as c
                     JOIN cart_product as cp ON c.cart_id=cp.cart_id
                     JOIN Product as p ON cp.product_id=p.product_id
@@ -262,6 +263,7 @@ class Buy(DB_set_up):
             is_empty = False
             print(row)
 
+        # self.buy_from_cart()
         if not is_empty:
             cart_id = row[0]
             print("Do you want to remove any item from the Cart ??")
@@ -281,6 +283,84 @@ class Buy(DB_set_up):
         self.connection.commit()
         self.view_cart()
 
+    def get_total_amount_of_cart(self):
+        cursor = self.connection.cursor()
+        query = f"""SELECT SUM(p.product_price * cp.quantity)
+                    AS total_price FROM Cart as c
+                    JOIN cart_product as cp ON c.cart_id=cp.cart_id
+                    JOIN Product as p ON cp.product_id=p.product_id
+                    where c.user_id={self.user_id};"""
+        cursor.execute(query)
+        final_amount = cursor.fetchone()
+
+        if not final_amount:
+            return 0
+
+        return final_amount[0]
+
+    def get_discounted_amount(self, total_amount):
+        DISCOUNT_ON = 10000
+        MAX_DISCOUNT = 500
+
+        if total_amount >= DISCOUNT_ON:
+            return MAX_DISCOUNT
+
+        return 0
+
+    def buy_from_cart(self):
+        # self.view_cart()
+        total_amount = self.get_total_amount_of_cart()
+        discounted_amount = self.get_discounted_amount(total_amount)
+
+        cursor = self.connection.cursor()
+        query = f"""INSERT INTO Orders
+                    (user_id, actual_amount, discounted_amount)
+                    VALUES ({self.user_id}, {total_amount},
+                            {discounted_amount});
+                """
+        cursor.execute(query)
+        self.connection.commit()
+
+        cursor = self.connection.cursor()
+        query = "SELECT LAST_INSERT_ID();"
+        cursor.execute(query)
+        order_id = cursor.fetchone()[0]
+
+        cursor = self.connection.cursor()
+        query = f"""SELECT c.cart_id, p.product_id, cp.quantity
+                    FROM Cart as c
+                    JOIN cart_product as cp ON c.cart_id=cp.cart_id
+                    JOIN Product as p ON cp.product_id=p.product_id
+                    WHERE c.user_id={self.user_id};
+                """
+        cursor.execute(query)
+        all_rows = cursor.fetchall()
+        data_to_be_inserted = list()
+
+        if len(all_rows):
+            cart_id = all_rows[0][0]
+
+        for row in all_rows:
+            row = list(row)
+            print(row)
+            row[0] = order_id
+            row = tuple(row)
+            data_to_be_inserted.append(row)
+
+        #insert the product details
+        cursor = self.connection.cursor()
+        query = """INSERT INTO OrderDetails
+                    (order_id, product_id, quantity)
+                    VALUES (%s, %s, %s)
+                """
+
+        cursor.executemany(query, data_to_be_inserted)
+        self.connection.commit()
+
+        query = f"DELETE FROM cart_product WHERE cart_id={cart_id};"
+        cursor = self.connection.cursor()
+        cursor.execute(query)
+        self.connection.commit()
 
 o = Buy()
 if o.is_admin:
