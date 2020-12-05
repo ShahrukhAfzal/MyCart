@@ -81,10 +81,8 @@ class Buy(DB_set_up):
     def list_all_categories(self):
         cursor = self.connection.cursor()
         cursor.execute(get_categories_query())
-
-        x = PrettyTable()
         mytable = from_db_cursor(cursor)
-        mytable.title = 'LIST OF ALL CATEGORIES'
+        mytable.title = click.style('LIST OF ALL CATEGORIES', fg='yellow', bold=True)
         print(mytable)
 
     def list_all_products(self, category_id):
@@ -171,7 +169,6 @@ class Buy(DB_set_up):
         # self.buy_from_cart()
 
     def view_cart(self):
-        print("\nHello, This is your Cart.")
         cursor = self.connection.cursor()
         query = f"""SELECT c.cart_id,
                     p.product_id, p.product_name, p.product_price,
@@ -184,10 +181,39 @@ class Buy(DB_set_up):
                 """
         cursor.execute(query)
         mytable = from_db_cursor(cursor)
-        mytable.title = 'Cart'
+        # mytable.hrules = 1
+        mytable.title = click.style('CART', fg='yellow', bold=True)
+        total_amount = self.get_total_amount_of_cart()
+        discounted_amount = self.get_discounted_amount(total_amount)
+        net_amount = total_amount - discounted_amount
+
+        total_row = ['']*(len(mytable.field_names)-2)
+        total_text = click.style('TOTAL', fg='green')
+        total_amount = click.style(str(total_amount), fg='green')
+        total_row.extend([total_text, total_amount ])
+        mytable.add_row(total_row)
+
+        if discounted_amount:
+            discount_row = ['']*(len(mytable.field_names)-2)
+            discount_text = click.style('DISCOUNT', fg='magenta')
+            discounted_amount = click.style(str(-discounted_amount), fg='magenta')
+            discount_row.extend([discount_text, discounted_amount ])
+            mytable.add_row(discount_row)
+
+        net_row = ['']*(len(mytable.field_names)-2)
+        net_text = click.style('NET TO PAY', fg='green')
+        net_amount = click.style(str(net_amount), fg='green')
+        net_row.extend([net_text, net_amount ])
+        mytable.add_row(net_row)
+
+
         print(mytable)
 
-        choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
+
+
+
+
+        # choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
         # choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
         # if choice == '1':
         #     pass
@@ -213,7 +239,15 @@ class Buy(DB_set_up):
         #         product_id = int(input("Enter the product id to remove"))
         #         self.remove_from_cart(cart_id, product_id)
 
-    def remove_from_cart(self, cart_id, product_id):
+    def remove_from_cart(self, **kwargs):
+        cart_id = kwargs.get('cart_id')
+        product_id = kwargs.get('product_id')
+
+        if not (cart_id and product_id):
+            cart_id = click.prompt("Enter the cart_id", type=int)
+            product_id = click.prompt("Enter the product_id", type=int)
+
+
         cursor = self.connection.cursor()
         query = f"""DELETE FROM cart_product
                     WHERE cart_id={cart_id}
@@ -221,7 +255,7 @@ class Buy(DB_set_up):
                 """
         cursor.execute(query)
         self.connection.commit()
-        self.view_cart()
+        # self.view_cart()
 
     def get_total_amount_of_cart(self):
         cursor = self.connection.cursor()
@@ -248,12 +282,8 @@ class Buy(DB_set_up):
         return 0
 
     def buy_from_cart(self):
-        # self.view_cart()
         total_amount = self.get_total_amount_of_cart()
         discounted_amount = self.get_discounted_amount(total_amount)
-
-        print(f"TOTAL PRICE = {total_amount}\nDiscount = -{discounted_amount}")
-        print(f"To pay = {total_amount - discounted_amount}")
 
         confirm = click.confirm('Are you sure want to buy this ?')
         if not confirm:
@@ -315,7 +345,7 @@ class Buy(DB_set_up):
     def get_ui(self):
         ui_dict = {
             'welcome': {
-                    'message': 'Welcome to MyCart'
+                    'message': 'Welcome to MyCart App'
                 },
 
         }
@@ -326,7 +356,7 @@ class Buy(DB_set_up):
         welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
         click.secho(welcome_string, bold=True, fg='yellow', bg='white')
 
-        choice_list = '\n1.Show category list\t2.Show Cart\n'
+        choice_list = '\n1.Show category list\t2.Show Cart\t3.exit\n'
         choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
         if choice == 1:
@@ -335,7 +365,6 @@ class Buy(DB_set_up):
             choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
             if choice == 1:
-                # self.list_all_categories()
                 category_id = click.prompt(click.style('Enter category id to see list of products', fg='yellow'), type=int)
                 self.list_all_products(category_id)
                 choice_list = '\n1.Detail of product\t2.Main Menu\n'
@@ -356,15 +385,39 @@ class Buy(DB_set_up):
 
                         if choice == 1:
                             self.buy_from_cart()
+                        elif choice == 2:
+                            self.remove_from_cart()
+                        else:
+                            return self.main()
+                    else:
+                        return self.main()
+                elif choice == 2:
+                    return self.main()
+                else:
+                    return self.main()
 
-
+            elif choice == 2:
+                return self.main()
+            else:
+                exit()
 
         elif choice == 2:
             self.view_cart()
             choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
             choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
 
-            self.main()
+            if choice == 1:
+                return self.buy_from_cart()
+            elif choice == 2:
+                self.remove_from_cart()
+                self.view_cart()
+
+                return self.main()
+            else:
+                self.main()
+
+        else:
+            exit()
 
 
 o = Buy()
@@ -372,5 +425,3 @@ if o.is_admin:
     pass
 else:
     o.main()
-    # category_id = o.list_all_categories()
-    # o.list_all_products(category_id)
