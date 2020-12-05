@@ -188,13 +188,13 @@ class Buy(DB_set_up):
         print(mytable)
 
         choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
-        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
-        if choice == '1':
-            pass
-        elif choice == '2':
-            pass
-        elif choice == '3':
-            self.main()
+        # choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
+        # if choice == '1':
+        #     pass
+        # elif choice == '2':
+        #     pass
+        # elif choice == '3':
+        #     self.main()
 
         # cursor.execute(query)
 
@@ -252,59 +252,65 @@ class Buy(DB_set_up):
         total_amount = self.get_total_amount_of_cart()
         discounted_amount = self.get_discounted_amount(total_amount)
 
-        cursor = self.connection.cursor()
-        query = f"""INSERT INTO Orders
-                    (user_id, actual_amount, discounted_amount)
-                    VALUES ({self.user_id}, {total_amount},
-                            {discounted_amount});
-                """
-        cursor.execute(query)
-        self.connection.commit()
-
-        cursor = self.connection.cursor()
-        query = "SELECT LAST_INSERT_ID();"
-        cursor.execute(query)
-        order_id = cursor.fetchone()[0]
-
-        cursor = self.connection.cursor()
-        query = f"""SELECT c.cart_id, p.product_id, cp.quantity
-                    FROM Cart as c
-                    JOIN cart_product as cp ON c.cart_id=cp.cart_id
-                    JOIN Product as p ON cp.product_id=p.product_id
-                    WHERE c.user_id={self.user_id};
-                """
-        cursor.execute(query)
-        all_rows = cursor.fetchall()
-        data_to_be_inserted = list()
-
-        if len(all_rows):
-            cart_id = all_rows[0][0]
-
-        for row in all_rows:
-            row = list(row)
-            print(row)
-            row[0] = order_id
-            row = tuple(row)
-            data_to_be_inserted.append(row)
-
-        #insert the product details
-        cursor = self.connection.cursor()
-        query = """INSERT INTO OrderDetails
-                    (order_id, product_id, quantity)
-                    VALUES (%s, %s, %s)
-                """
-
-        cursor.executemany(query, data_to_be_inserted)
-        self.connection.commit()
-
-        query = f"DELETE FROM cart_product WHERE cart_id={cart_id};"
-        cursor = self.connection.cursor()
-        cursor.execute(query)
-        self.connection.commit()
         print(f"TOTAL PRICE = {total_amount}\nDiscount = -{discounted_amount}")
         print(f"To pay = {total_amount - discounted_amount}")
-        print("\nThank you for shopping at MyCart.")
-        print("Have a Good Day.")
+
+        confirm = click.confirm('Are you sure want to buy this ?')
+        if not confirm:
+            return self.main()
+        else:
+            cursor = self.connection.cursor()
+            query = f"""INSERT INTO Orders
+                        (user_id, actual_amount, discounted_amount)
+                        VALUES ({self.user_id}, {total_amount},
+                                {discounted_amount});
+                    """
+            cursor.execute(query)
+            self.connection.commit()
+
+            cursor = self.connection.cursor()
+            query = "SELECT LAST_INSERT_ID();"
+            cursor.execute(query)
+            order_id = cursor.fetchone()[0]
+
+            cursor = self.connection.cursor()
+            query = f"""SELECT c.cart_id, p.product_id, cp.quantity
+                        FROM Cart as c
+                        JOIN cart_product as cp ON c.cart_id=cp.cart_id
+                        JOIN Product as p ON cp.product_id=p.product_id
+                        WHERE c.user_id={self.user_id};
+                    """
+            cursor.execute(query)
+            all_rows = cursor.fetchall()
+            data_to_be_inserted = list()
+
+            if len(all_rows):
+                cart_id = all_rows[0][0]
+
+            for row in all_rows:
+                row = list(row)
+                print(row)
+                row[0] = order_id
+                row = tuple(row)
+                data_to_be_inserted.append(row)
+
+            #insert the product details
+            cursor = self.connection.cursor()
+            query = """INSERT INTO OrderDetails
+                        (order_id, product_id, quantity)
+                        VALUES (%s, %s, %s)
+                    """
+
+            cursor.executemany(query, data_to_be_inserted)
+            self.connection.commit()
+
+            query = f"DELETE FROM cart_product WHERE cart_id={cart_id};"
+            cursor = self.connection.cursor()
+            cursor.execute(query)
+            self.connection.commit()
+
+            print("\nThank you for shopping at MyCart.")
+            print("Have a Good Day.")
 
     def get_ui(self):
         ui_dict = {
@@ -321,32 +327,43 @@ class Buy(DB_set_up):
         click.secho(welcome_string, bold=True, fg='yellow', bg='white')
 
         choice_list = '\n1.Show category list\t2.Show Cart\n'
-        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list)
+        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
-        if choice == '1':
+        if choice == 1:
             self.list_all_categories()
-            choice_list = '\n1.Show Products\t2.Main Menu\t3.exit\n'
-            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list)
+            choice_list = '\n1.Show Products\t 2.Main Menu\t 3.exit\n'
+            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
-            if choice == '1':
-                self.list_all_categories()
-                category_id = click.prompt(click.style('Enter category id to see list of products', fg='yellow'))
+            if choice == 1:
+                # self.list_all_categories()
+                category_id = click.prompt(click.style('Enter category id to see list of products', fg='yellow'), type=int)
                 self.list_all_products(category_id)
                 choice_list = '\n1.Detail of product\t2.Main Menu\n'
-                choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list)
+                choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
 
-                if choice == '1':
+                if choice == 1:
                     product_id = click.prompt(click.style('Enter product id to see its details', fg='bright_blue'))
                     self.detail_product(product_id, category_id)
                     choice_list = '\n1.Do you want to add this item to the cart\t2.Main Menu\n'
-                    choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list)
+                    choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
 
-                    if choice == '1':
+                    if choice == 1:
                         self.add_to_cart(product_id)
                         click.secho('Product successfully added to cart', fg='green')
                         self.view_cart()
-        elif choice == '2':
+                        choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
+                        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
+                        if choice == 1:
+                            self.buy_from_cart()
+
+
+
+        elif choice == 2:
             self.view_cart()
+            choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
+            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
             self.main()
 
 
