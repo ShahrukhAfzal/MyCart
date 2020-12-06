@@ -211,7 +211,7 @@ class MyCart(DB_set_up):
 
         confirm = click.confirm('Are you sure want to buy this ?', default=True)
         if not confirm:
-            return self.main()
+            return self.customer()
         else:
             cursor = self.connection.cursor()
             cursor.execute(buy_from_cart_query(self.user_id, total_amount, discounted_amount))
@@ -262,6 +262,12 @@ class MyCart(DB_set_up):
         welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
         click.secho(welcome_string, bold=True, fg='yellow', bg='white')
 
+        if self.is_admin:
+            pass
+        else:
+            self.customer()
+
+    def customer(self):
         choice_list = '\n1.Show category list\t2.Show Cart\t3.exit\n'
         choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
@@ -294,18 +300,18 @@ class MyCart(DB_set_up):
                         elif choice == 2:
                             self.remove_from_cart()
                             self.view_cart()
-                            return self.main()
+                            return self.customer()
                         else:
-                            return self.main()
+                            return self.customer()
                     else:
-                        return self.main()
+                        return self.customer()
                 elif choice == 2:
-                    return self.main()
+                    return self.customer()
                 else:
-                    return self.main()
+                    return self.customer()
 
             elif choice == 2:
-                return self.main()
+                return self.customer()
             else:
                 exit()
 
@@ -320,9 +326,9 @@ class MyCart(DB_set_up):
                 self.remove_from_cart()
                 self.view_cart()
 
-                return self.main()
+                return self.customer()
             else:
-                self.main()
+                self.customer()
 
         else:
             exit()
@@ -330,8 +336,8 @@ class MyCart(DB_set_up):
 
 if __name__ == "__main__":
     start = MyCart()
-    if start.is_admin:
-        pass
-    else:
-        start.main()
+    start.main()
+    # if start.is_admin:
+    #     pass
+    # else:
 
