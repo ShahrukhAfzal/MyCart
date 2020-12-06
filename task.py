@@ -7,7 +7,8 @@ from prettytable import PrettyTable, from_db_cursor
 
 from config import DB_USER, DB_PASSWORD, DB_NAME
 
-from database.user_query import (get_login_query, get_all_user_query)
+from database.user_query import (get_login_query, get_all_user_query,
+    get_all_bill_by_user_query)
 
 from database.product_queries import (get_categories_query, get_products_query,
     get_product_detail_query, get_last_insert_id, add_category_query,
@@ -366,7 +367,8 @@ class MyCart(DB_set_up):
             return self.admin()
 
         elif choice == 4:
-            pass
+            self.get_all_bill_from_user()
+            return self.admin()
 
         else:
             exit()
@@ -407,6 +409,17 @@ class MyCart(DB_set_up):
         self.connection.commit()
         click.secho(f"Added {product_name}", fg='blue')
         self.list_all_products(category_id)
+
+    def get_all_bill_from_user(self):
+        self.get_all_user()
+        cursor = self.connection.cursor()
+        user_id = click.prompt(click.style('Enter the user_id to see its all bill', fg='yellow'), type=int)
+        cursor.execute(get_all_bill_by_user_query(user_id))
+        mytable = from_db_cursor(cursor)
+        mytable.title = f"Bill of user {user_id}"
+
+        print(mytable)
+
 
 if __name__ == "__main__":
     start = MyCart()
