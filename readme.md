@@ -76,6 +76,8 @@ mysql > INSERT INTO User (user_name, user_email, password, is_admin) VALUES ('ad
 mysql > INSERT INTO User (user_name, user_email, password, is_admin) VALUES ('shahrukh', 'shoaibtayyab121@gmail.com', '123456', False);
 ```
 
+### It is recommended to run fixtures queries in fixture_queries file to get some prepopulated data.
+
 ## Re-run app:
 ```
 $ python3 task.py
