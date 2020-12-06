@@ -7,7 +7,7 @@ from prettytable import PrettyTable, from_db_cursor
 
 from config import DB_USER, DB_PASSWORD, DB_NAME
 
-from database.user_query import get_login_query
+from database.user_query import (get_login_query, get_all_user_query)
 
 from database.product_queries import (get_categories_query, get_products_query,
     get_product_detail_query, get_last_insert_id, add_category_query,
@@ -145,9 +145,23 @@ class MyCart(DB_set_up):
             cursor.execute(create_cart_product_query(cart_id, product_id, quantity))
             self.connection.commit()
 
+    def get_all_user(self):
+        cursor = self.connection.cursor()
+        cursor.execute(get_all_user_query())
+        # cursor.fetchall()
+        mytable = from_db_cursor(cursor)
+        mytable.title = 'List of all the Customer'
+        print(mytable)
+
     def view_cart(self):
         cursor = self.connection.cursor()
-        cursor.execute(view_cart_query(self.user_id))
+        if self.is_admin:
+            self.get_all_user()
+            user_id = click.prompt(click.style('Enter user_id to show its cart...', fg='yellow'), type=int)
+            cursor.execute(view_cart_query(user_id))
+        else:
+            cursor.execute(view_cart_query(self.user_id))
+
         mytable = from_db_cursor(cursor)
         # mytable.hrules = 1
         mytable.title = click.style('CART', fg='yellow', bold=True)
@@ -263,6 +277,7 @@ class MyCart(DB_set_up):
         welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
         click.secho(welcome_string, bold=True, fg='yellow', bg='white')
 
+        self.is_admin = 1
         if self.is_admin:
             self.admin()
         else:
@@ -347,7 +362,8 @@ class MyCart(DB_set_up):
             return self.admin()
 
         elif choice == 3:
-            pass
+            self.view_cart()
+            return self.admin()
 
         elif choice == 4:
             pass
@@ -375,13 +391,15 @@ class MyCart(DB_set_up):
 
     def add_product(self):
         click.secho('Add product', fg='green')
-        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
-        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
-        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
 
+        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
         if (len(product_name.strip()) < 3):
             click.secho('Error: Product name should be greater than 3 characters', fg='red')
             return self.add_product()
+
+        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
+        self.list_all_categories()
+        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
 
         confirm = click.confirm(click.style('Are you sure want to add this product?', fg='yellow', blink=True), default=True)
         cursor = self.connection.cursor()
