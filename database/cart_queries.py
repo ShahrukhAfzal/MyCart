@@ -3,7 +3,7 @@ contains all the cart related queries
 """
 
 def create_cart_query(user_id):
-    create_cart_query = f"""INSERT INTO Cart (user_id) VALUES ({user_id})"""
+    create_cart_query = f"""INSERT INTO Cart (user_id) VALUES ('{user_id}')"""
 
     return create_cart_query
 

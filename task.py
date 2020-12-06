@@ -10,7 +10,8 @@ from config import DB_USER, DB_PASSWORD, DB_NAME
 from database.user_query import get_login_query
 
 from database.product_queries import (get_categories_query, get_products_query,
-    get_product_detail_query, get_last_insert_id,)
+    get_product_detail_query, get_last_insert_id, add_category_query,
+    add_product_query)
 from database.new_tables import (create_user_table,
     create_category_table, create_product_table, create_cart_table,
     create_cart_product_table, create_order_table,
@@ -211,7 +212,7 @@ class MyCart(DB_set_up):
 
         confirm = click.confirm('Are you sure want to buy this ?', default=True)
         if not confirm:
-            return self.main()
+            return self.customer()
         else:
             cursor = self.connection.cursor()
             cursor.execute(buy_from_cart_query(self.user_id, total_amount, discounted_amount))
@@ -262,6 +263,12 @@ class MyCart(DB_set_up):
         welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
         click.secho(welcome_string, bold=True, fg='yellow', bg='white')
 
+        if self.is_admin:
+            self.admin()
+        else:
+            self.customer()
+
+    def customer(self):
         choice_list = '\n1.Show category list\t2.Show Cart\t3.exit\n'
         choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
@@ -294,18 +301,18 @@ class MyCart(DB_set_up):
                         elif choice == 2:
                             self.remove_from_cart()
                             self.view_cart()
-                            return self.main()
+                            return self.customer()
                         else:
-                            return self.main()
+                            return self.customer()
                     else:
-                        return self.main()
+                        return self.customer()
                 elif choice == 2:
-                    return self.main()
+                    return self.customer()
                 else:
-                    return self.main()
+                    return self.customer()
 
             elif choice == 2:
-                return self.main()
+                return self.customer()
             else:
                 exit()
 
@@ -320,18 +327,70 @@ class MyCart(DB_set_up):
                 self.remove_from_cart()
                 self.view_cart()
 
-                return self.main()
+                return self.customer()
             else:
-                self.main()
+                self.customer()
 
         else:
             exit()
 
+    def admin(self):
+        choice_list = '\n1.Add Category\t2.Add Product\t3.Show cart of the user\t4.Orders of User\t5.exit\n'
+        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
+
+        if choice == 1:
+            self.add_category()
+            return self.admin()
+
+        elif choice == 2:
+            self.add_product()
+            return self.admin()
+
+        elif choice == 3:
+            pass
+
+        elif choice == 4:
+            pass
+
+        else:
+            exit()
+
+    def add_category(self):
+        click.secho('Add category', fg='green')
+        category_name = click.prompt(click.style('Add category name', fg='yellow'), type=str)
+        category_description = click.prompt(click.style(
+                                text='Add category description (Not required)', fg='yellow'
+                                ), type=str, default='', show_default=False)
+
+        if (len(category_name.strip()) < 3):
+            click.secho('Error: Category name should be greater than 3 characters', fg='red')
+            return self.add_category()
+
+        confirm = click.confirm(click.style('Are you sure want to add this category?', fg='yellow', blink=True), default=True)
+        cursor = self.connection.cursor()
+        cursor.execute(add_category_query(category_name, category_description))
+        self.connection.commit()
+        click.secho(f"Added {category_name}", fg='blue')
+        self.list_all_categories()
+
+    def add_product(self):
+        click.secho('Add product', fg='green')
+        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
+        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
+        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
+
+        if (len(product_name.strip()) < 3):
+            click.secho('Error: Product name should be greater than 3 characters', fg='red')
+            return self.add_product()
+
+        confirm = click.confirm(click.style('Are you sure want to add this product?', fg='yellow', blink=True), default=True)
+        cursor = self.connection.cursor()
+        cursor.execute(add_product_query(product_name, product_price, category_id))
+        self.connection.commit()
+        click.secho(f"Added {product_name}", fg='blue')
+        self.list_all_products(category_id)
 
 if __name__ == "__main__":
     start = MyCart()
-    if start.is_admin:
-        pass
-    else:
-        start.main()
+    start.main()
 
