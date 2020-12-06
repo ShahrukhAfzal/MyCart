@@ -7,7 +7,8 @@ from prettytable import PrettyTable, from_db_cursor
 
 from config import DB_USER, DB_PASSWORD, DB_NAME
 
-from database.user_query import get_login_query
+from database.user_query import (get_login_query, get_all_user_query,
+    get_all_bill_by_user_query)
 
 from database.product_queries import (get_categories_query, get_products_query,
     get_product_detail_query, get_last_insert_id, add_category_query,
@@ -32,6 +33,8 @@ class DB_set_up:
                                         )
 
         self.connection = connection
+        self.clear_screen()
+
         self.create_all_table_if_not_exists()
         self.is_admin = self.login()
 
@@ -61,24 +64,29 @@ class DB_set_up:
         # self.connection.commit()
 
     def login(self):
-        # username = input("Please enter your user_name\t")
-        # password = input("Please enter your password\t")
+        username = click.prompt(click.style('Username ??', fg='cyan'), type=str,
+                                            prompt_suffix='\t'
+                                        )
+        password = click.prompt(click.style('Password ??', fg='cyan'), type=str,
+                                hide_input=True, prompt_suffix='\t'
+                            )
 
-        username = 'shahrukh'
-        password = '123456'
         cursor = self.connection.cursor()
         login_query = get_login_query(username, password)
         cursor.execute(login_query)
-        r = cursor.fetchone()
-        if r:
-            self.user_id = r[0]
+        result = cursor.fetchone()
+        if result:
+            self.user_id = result[0]
             self.username = username
-            return r[-2]
+            self.clear_screen()
+
+            return result[-2]
         else:
-            print("Wrong credentials")
-            c = input("Do you want to retry, enter y for yes\n")
-            if c.lower() in ['y', 'yes']:
-                self.login()
+            click.secho('Wrong credentials', fg='red')
+            retry = click.confirm('Do you want to retry ?', default=True)
+            if retry:
+                self.clear_screen()
+                return self.login()
             else:
                 quit()
 
@@ -145,9 +153,23 @@ class MyCart(DB_set_up):
             cursor.execute(create_cart_product_query(cart_id, product_id, quantity))
             self.connection.commit()
 
+    def get_all_user(self):
+        cursor = self.connection.cursor()
+        cursor.execute(get_all_user_query())
+        # cursor.fetchall()
+        mytable = from_db_cursor(cursor)
+        mytable.title = 'List of all the Customer'
+        print(mytable)
+
     def view_cart(self):
         cursor = self.connection.cursor()
-        cursor.execute(view_cart_query(self.user_id))
+        if self.is_admin:
+            self.get_all_user()
+            user_id = click.prompt(click.style('Enter user_id to show its cart...', fg='yellow'), type=int)
+            cursor.execute(view_cart_query(user_id))
+        else:
+            cursor.execute(view_cart_query(self.user_id))
+
         mytable = from_db_cursor(cursor)
         # mytable.hrules = 1
         mytable.title = click.style('CART', fg='yellow', bold=True)
@@ -249,27 +271,8 @@ class MyCart(DB_set_up):
             print("\nThank you for shopping at MyCart.")
             print("Have a Good Day.")
 
-    def get_ui(self):
-        ui_dict = {
-            'welcome': {
-                    'message': 'Welcome to MyCart App'
-                },
-
-        }
-        return ui_dict
-
-    def main(self):
-        ui_dict = self.get_ui()
-        welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
-        click.secho(welcome_string, bold=True, fg='yellow', bg='white')
-
-        if self.is_admin:
-            self.admin()
-        else:
-            self.customer()
-
     def customer(self):
-        choice_list = '\n1.Show category list\t2.Show Cart\t3.exit\n'
+        choice_list = '\n1.Buy(Show category list)\t2.Show Cart\t3.exit\n'
         choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
         if choice == 1:
@@ -347,10 +350,12 @@ class MyCart(DB_set_up):
             return self.admin()
 
         elif choice == 3:
-            pass
+            self.view_cart()
+            return self.admin()
 
         elif choice == 4:
-            pass
+            self.get_all_bill_from_user()
+            return self.admin()
 
         else:
             exit()
@@ -375,13 +380,15 @@ class MyCart(DB_set_up):
 
     def add_product(self):
         click.secho('Add product', fg='green')
-        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
-        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
-        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
 
+        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
         if (len(product_name.strip()) < 3):
             click.secho('Error: Product name should be greater than 3 characters', fg='red')
             return self.add_product()
+
+        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
+        self.list_all_categories()
+        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
 
         confirm = click.confirm(click.style('Are you sure want to add this product?', fg='yellow', blink=True), default=True)
         cursor = self.connection.cursor()
@@ -389,6 +396,31 @@ class MyCart(DB_set_up):
         self.connection.commit()
         click.secho(f"Added {product_name}", fg='blue')
         self.list_all_products(category_id)
+
+    def get_all_bill_from_user(self):
+        self.get_all_user()
+        cursor = self.connection.cursor()
+        user_id = click.prompt(click.style('Enter the user_id to see its all bill', fg='yellow'), type=int)
+        cursor.execute(get_all_bill_by_user_query(user_id))
+        mytable = from_db_cursor(cursor)
+        mytable.title = f"Bill of user {user_id}"
+
+        print(mytable)
+
+    def clear_screen(self):
+        click.clear()
+        self.get_welcome_string()
+
+    def get_welcome_string(self):
+        welcome_string = 'Welcome to MyCart App'.center(shutil.get_terminal_size().columns)
+        click.secho(welcome_string, bold=True, fg='yellow', blink=True)
+        print('\n')
+
+    def main(self):
+        if self.is_admin:
+            self.admin()
+        else:
+            self.customer()
 
 if __name__ == "__main__":
     start = MyCart()
