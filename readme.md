@@ -1,6 +1,6 @@
-# Foobar
+# MyCart
 
-Foobar is a Python library for dealing with word pluralization.
+MyCart is a basic e-commerce app.
 
 ## Database Setup
 
