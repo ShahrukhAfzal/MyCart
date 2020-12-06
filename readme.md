@@ -13,7 +13,7 @@ After successfully installing it.
 #### Follow these steps
 
 ```
-sudo mysql
+$ sudo mysql
 ```
 ##### 1. Create a new user
 
@@ -35,9 +35,9 @@ $ mysql -u test-user -p
 then enter the password as 12345678
 
 ```
-CREATE DATABASE temp_db;
+mysql > CREATE DATABASE temp_db;
 
-USE temp_db;
+mysql > USE temp_db;
 ```
 
 ## Python setup
@@ -50,5 +50,36 @@ For virtual environment [click here](https://packaging.python.org/guides/install
 ## Project setup
 
 ```
-pip3 install -r requirements.txt
+$ pip3 install -r requirements.txt
 ```
+
+## Run app
+```
+$ python3 task.py
+```
+This will create all tables, if not existed. But inorder to use app we must create two types of user one is admin and other is customer.
+
+## Create admin and customer user 
+
+###### Now reconnect database using newly created user
+```
+$ mysql -u test-user -p
+```
+then enter the password as 12345678
+
+```
+mysql > USE temp_db;
+
+-- 
+mysql > INSERT INTO User (user_name, user_email, password, is_admin) VALUES ('admin', 'admin@gmail.com', '123456', True);
+
+mysql > INSERT INTO User (user_name, user_email, password, is_admin) VALUES ('shahrukh', 'shoaibtayyab121@gmail.com', '123456', False);
+```
+
+## Re-run app:
+```
+$ python3 task.py
+```
+Now the app is ready to use.
+
+###### Hope you like it.
