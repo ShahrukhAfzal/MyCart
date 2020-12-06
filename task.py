@@ -33,6 +33,8 @@ class DB_set_up:
                                         )
 
         self.connection = connection
+        self.clear_screen()
+
         self.create_all_table_if_not_exists()
         self.is_admin = self.login()
 
@@ -62,24 +64,29 @@ class DB_set_up:
         # self.connection.commit()
 
     def login(self):
-        # username = input("Please enter your user_name\t")
-        # password = input("Please enter your password\t")
+        username = click.prompt(click.style('Username ??', fg='cyan'), type=str,
+                                            prompt_suffix='\t'
+                                        )
+        password = click.prompt(click.style('Password ??', fg='cyan'), type=str,
+                                hide_input=True, prompt_suffix='\t'
+                            )
 
-        username = 'shahrukh'
-        password = '123456'
         cursor = self.connection.cursor()
         login_query = get_login_query(username, password)
         cursor.execute(login_query)
-        r = cursor.fetchone()
-        if r:
-            self.user_id = r[0]
+        result = cursor.fetchone()
+        if result:
+            self.user_id = result[0]
             self.username = username
-            return r[-2]
+            self.clear_screen()
+
+            return result[-2]
         else:
-            print("Wrong credentials")
-            c = input("Do you want to retry, enter y for yes\n")
-            if c.lower() in ['y', 'yes']:
-                self.login()
+            click.secho('Wrong credentials', fg='red')
+            retry = click.confirm('Do you want to retry ?', default=True)
+            if retry:
+                self.clear_screen()
+                return self.login()
             else:
                 quit()
 
@@ -264,28 +271,8 @@ class MyCart(DB_set_up):
             print("\nThank you for shopping at MyCart.")
             print("Have a Good Day.")
 
-    def get_ui(self):
-        ui_dict = {
-            'welcome': {
-                    'message': 'Welcome to MyCart App'
-                },
-
-        }
-        return ui_dict
-
-    def main(self):
-        ui_dict = self.get_ui()
-        welcome_string = ui_dict['welcome']['message'].center(shutil.get_terminal_size().columns)
-        click.secho(welcome_string, bold=True, fg='yellow', bg='white')
-
-        self.is_admin = 1
-        if self.is_admin:
-            self.admin()
-        else:
-            self.customer()
-
     def customer(self):
-        choice_list = '\n1.Show category list\t2.Show Cart\t3.exit\n'
+        choice_list = '\n1.Buy(Show category list)\t2.Show Cart\t3.exit\n'
         choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
         if choice == 1:
@@ -420,6 +407,20 @@ class MyCart(DB_set_up):
 
         print(mytable)
 
+    def clear_screen(self):
+        click.clear()
+        self.get_welcome_string()
+
+    def get_welcome_string(self):
+        welcome_string = 'Welcome to MyCart App'.center(shutil.get_terminal_size().columns)
+        click.secho(welcome_string, bold=True, fg='yellow', blink=True)
+        print('\n')
+
+    def main(self):
+        if self.is_admin:
+            self.admin()
+        else:
+            self.customer()
 
 if __name__ == "__main__":
     start = MyCart()
