@@ -80,7 +80,7 @@ class DB_set_up:
             self.username = username
             self.clear_screen()
 
-            return result[-2]
+            return result[-1] # return if the curres
         else:
             click.secho('Wrong credentials', fg='red')
             retry = click.confirm('Do you want to retry ?', default=True)
