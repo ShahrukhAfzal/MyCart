@@ -1,5 +1,3 @@
-import shutil
-
 import click
 import mysql.connector
 
@@ -7,9 +5,12 @@ from prettytable import PrettyTable, from_db_cursor
 
 from config import DB_USER, DB_PASSWORD, DB_NAME
 
+from utils import (clear_screen, print_welcome_string,
+    print_successful_login_message, print_unsuccessful_login_message, retry,
+    get_username, get_password, get_choice)
+
 from database.user_query import (get_login_query, get_all_user_query,
     get_all_bill_by_user_query)
-
 from database.product_queries import (get_categories_query, get_products_query,
     get_product_detail_query, get_last_insert_id, add_category_query,
     add_product_query)
@@ -27,78 +28,153 @@ from database.cart_queries import (create_cart_query, get_cart_id_query,
 
 class DB_set_up:
     def __init__(self):
-        connection = mysql.connector.connect(user=DB_USER,
-                                            password=DB_PASSWORD,
-                                            database=DB_NAME
-                                        )
-
-        self.connection = connection
-        self.clear_screen()
-
+        self.create_db_connection()
         self.create_all_table_if_not_exists()
-        self.is_admin = self.login()
+
+    def create_db_connection(self):
+        self.connection = mysql.connector.connect(user=DB_USER,
+                                                password=DB_PASSWORD,
+                                                database=DB_NAME
+                                            )
 
     def create_all_table_if_not_exists(self):
-
         cursor = self.connection.cursor()
-
         cursor.execute(create_user_table)
-        # self.connection.commit()
-
         cursor.execute(create_category_table)
-        # self.connection.commit()
-
         cursor.execute(create_product_table)
-        # self.connection.commit()
-
         cursor.execute(create_cart_table)
-        # self.connection.commit()
-
         cursor.execute(create_cart_product_table)
-        # self.connection.commit()
-
         cursor.execute(create_order_table)
-        # self.connection.commit()
-
         cursor.execute(create_order_details_table)
-        # self.connection.commit()
+
+    def execute_query(self, query, get_dictionary=False):
+        cursor = self.connection.cursor(dictionary=get_dictionary)
+        cursor.execute(query)
+        return cursor
+
+
+class User:
 
     def login(self):
-        username = click.prompt(click.style('Username ??', fg='cyan'), type=str,
-                                            prompt_suffix='\t'
-                                        )
-        password = click.prompt(click.style('Password ??', fg='cyan'), type=str,
-                                hide_input=True, prompt_suffix='\t'
-                            )
-
-        cursor = self.connection.cursor()
-        login_query = get_login_query(username, password)
-        cursor.execute(login_query)
+        cursor = self.execute_query(get_login_query(get_username(), get_password()))
         result = cursor.fetchone()
-        if result:
-            self.user_id = result[0]
-            self.username = username
-            self.clear_screen()
-
-            return result[-2]
-        else:
-            click.secho('Wrong credentials', fg='red')
-            retry = click.confirm('Do you want to retry ?', default=True)
-            if retry:
-                self.clear_screen()
-                return self.login()
-            else:
-                quit()
+        return result
 
     def signup(self):
         pass
 
-
-class MyCart(DB_set_up):
-
-    def list_all_categories(self):
+    def get_all_user(self):
         cursor = self.connection.cursor()
-        cursor.execute(get_categories_query())
+        cursor.execute(get_all_user_query())
+        mytable = from_db_cursor(cursor)
+        mytable.title = 'List of all the Customer'
+        print(mytable)
+
+    def get_all_bill_from_user(self):
+        self.get_all_user()
+        cursor = self.connection.cursor()
+        user_id = click.prompt(click.style('Enter the user_id to see its all bill', fg='yellow'), type=int)
+        cursor.execute(get_all_bill_by_user_query(user_id))
+        mytable = from_db_cursor(cursor)
+        mytable.title = f"Bill of user {user_id}"
+
+        print(mytable)
+
+    def customer_flow(self):
+        choice_list = '\n1.Buy(Show category list)\t2.Show Cart\t3.exit\n'
+        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
+
+        if choice == 1:
+            self.list_all_categories()
+            choice_list = '\n1.Show Products\t 2.Main Menu\t 3.exit\n'
+            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
+
+            if choice == 1:
+                category_id = click.prompt(click.style('Enter category id to see list of products', fg='yellow'), type=int)
+                self.list_all_products(category_id)
+                choice_list = '\n1.Detail of product\t2.Main Menu\n'
+                choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
+                if choice == 1:
+                    product_id = click.prompt(click.style('Enter product id to see its details', fg='bright_blue'), type=int)
+                    self.detail_product(product_id)
+                    choice_list = '\n1.Do you want to add this item to the cart\t2.Main Menu\n'
+                    choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
+                    if choice == 1:
+                        self.add_to_cart(product_id)
+                        click.secho('Product successfully added to cart', fg='green')
+                        self.view_cart()
+                        choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
+                        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
+                        if choice == 1:
+                            self.buy_from_cart()
+                        elif choice == 2:
+                            self.remove_from_cart()
+                            self.view_cart()
+                            return self.customer_flow()
+                        else:
+                            return self.customer_flow()
+                    else:
+                        return self.customer_flow()
+                elif choice == 2:
+                    return self.customer_flow()
+                else:
+                    return self.customer_flow()
+
+            elif choice == 2:
+                return self.customer_flow()
+            else:
+                exit()
+
+        elif choice == 2:
+            self.view_cart()
+            choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
+            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
+
+            if choice == 1:
+                return self.buy_from_cart()
+            elif choice == 2:
+                self.remove_from_cart()
+                self.view_cart()
+
+                return self.customer_flow()
+            else:
+                self.customer_flow()
+
+        else:
+            exit()
+
+    def admin_flow(self):
+        choice_list = ['Add Category', 'Add Product', 'Show cart of the user', 'Orders of User', 'exit']
+        choice = get_choice(choice_list)
+
+        if choice == 1:
+            self.add_category()
+            return self.admin_flow()
+
+        elif choice == 2:
+            self.add_product()
+            return self.admin_flow()
+
+        elif choice == 3:
+            self.view_cart()
+            return self.admin_flow()
+
+        elif choice == 4:
+            self.get_all_bill_from_user()
+            return self.admin_flow()
+
+        else:
+            exit()
+
+
+class Product:
+    """
+    """
+    def list_all_categories(self):
+        cursor = self.execute_query(get_categories_query())
         mytable = from_db_cursor(cursor)
         mytable.title = click.style('LIST OF ALL CATEGORIES', fg='yellow', bold=True)
         print(mytable)
@@ -121,6 +197,51 @@ class MyCart(DB_set_up):
         mytable = from_db_cursor(cursor)
         mytable.title = 'Product detail'
         print(mytable)
+
+    def add_category(self, category_name=None, category_description=None, ask_confirm=True, confirm=True):
+        click.secho('Add category', fg='green')
+        if not category_name:
+            category_name = click.prompt(click.style('Add category name', fg='yellow'), type=str)
+
+        if (len(category_name.strip()) < 3):
+            click.secho('Error: Category name should be greater than 3 characters', fg='red')
+            return self.add_category()
+
+        if not category_description:
+            category_description = click.prompt(click.style(text='Add category description (Not required)', fg='yellow'), type=str, default='', show_default=False)
+
+        if ask_confirm:
+            confirm = click.confirm(click.style('Are you sure want to add this category?', fg='yellow', blink=True), default=True)
+
+        if confirm:
+            self.execute_query(add_category_query(category_name, category_description))
+            self.connection.commit()
+            click.secho(f"Added {category_name}", fg='blue')
+            self.list_all_categories()
+        else:
+            return self.admin_flow()
+
+    def add_product(self):
+        click.secho('Add product', fg='green')
+
+        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
+        if (len(product_name.strip()) < 3):
+            click.secho('Error: Product name should be greater than 3 characters', fg='red')
+            return self.add_product()
+
+        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
+        self.list_all_categories()
+        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
+
+        confirm = click.confirm(click.style('Are you sure want to add this product?', fg='yellow', blink=True), default=True)
+        cursor = self.connection.cursor()
+        cursor.execute(add_product_query(product_name, product_price, category_id))
+        self.connection.commit()
+        click.secho(f"Added {product_name}", fg='blue')
+        self.list_all_products(category_id)
+
+
+class Cart:
 
     def add_to_cart(self, product_id):
         prompt_suffix = "(default is" + click.style(" 1", fg='magenta') + ')\t'
@@ -152,14 +273,6 @@ class MyCart(DB_set_up):
         else:
             cursor.execute(create_cart_product_query(cart_id, product_id, quantity))
             self.connection.commit()
-
-    def get_all_user(self):
-        cursor = self.connection.cursor()
-        cursor.execute(get_all_user_query())
-        # cursor.fetchall()
-        mytable = from_db_cursor(cursor)
-        mytable.title = 'List of all the Customer'
-        print(mytable)
 
     def view_cart(self):
         cursor = self.connection.cursor()
@@ -234,7 +347,7 @@ class MyCart(DB_set_up):
 
         confirm = click.confirm('Are you sure want to buy this ?', default=True)
         if not confirm:
-            return self.customer()
+            return self.customer_flow()
         else:
             cursor = self.connection.cursor()
             cursor.execute(buy_from_cart_query(self.user_id, total_amount, discounted_amount))
@@ -271,158 +384,34 @@ class MyCart(DB_set_up):
             print("\nThank you for shopping at MyCart.")
             print("Have a Good Day.")
 
-    def customer(self):
-        choice_list = '\n1.Buy(Show category list)\t2.Show Cart\t3.exit\n'
-        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
 
-        if choice == 1:
-            self.list_all_categories()
-            choice_list = '\n1.Show Products\t 2.Main Menu\t 3.exit\n'
-            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
-
-            if choice == 1:
-                category_id = click.prompt(click.style('Enter category id to see list of products', fg='yellow'), type=int)
-                self.list_all_products(category_id)
-                choice_list = '\n1.Detail of product\t2.Main Menu\n'
-                choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
-
-                if choice == 1:
-                    product_id = click.prompt(click.style('Enter product id to see its details', fg='bright_blue'), type=int)
-                    self.detail_product(product_id)
-                    choice_list = '\n1.Do you want to add this item to the cart\t2.Main Menu\n'
-                    choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
-
-                    if choice == 1:
-                        self.add_to_cart(product_id)
-                        click.secho('Product successfully added to cart', fg='green')
-                        self.view_cart()
-                        choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
-                        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
-
-                        if choice == 1:
-                            self.buy_from_cart()
-                        elif choice == 2:
-                            self.remove_from_cart()
-                            self.view_cart()
-                            return self.customer()
-                        else:
-                            return self.customer()
-                    else:
-                        return self.customer()
-                elif choice == 2:
-                    return self.customer()
-                else:
-                    return self.customer()
-
-            elif choice == 2:
-                return self.customer()
-            else:
-                exit()
-
-        elif choice == 2:
-            self.view_cart()
-            choice_list = '\n1.Buy\t2.Remove item from the cart\t3.main_menu\n'
-            choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='blue'), prompt_suffix=choice_list, type=int)
-
-            if choice == 1:
-                return self.buy_from_cart()
-            elif choice == 2:
-                self.remove_from_cart()
-                self.view_cart()
-
-                return self.customer()
-            else:
-                self.customer()
-
-        else:
-            exit()
-
-    def admin(self):
-        choice_list = '\n1.Add Category\t2.Add Product\t3.Show cart of the user\t4.Orders of User\t5.exit\n'
-        choice = click.prompt(click.style('Please enter your choice (e.g. 1 or 2)', fg='yellow'), prompt_suffix=choice_list, type=int)
-
-        if choice == 1:
-            self.add_category()
-            return self.admin()
-
-        elif choice == 2:
-            self.add_product()
-            return self.admin()
-
-        elif choice == 3:
-            self.view_cart()
-            return self.admin()
-
-        elif choice == 4:
-            self.get_all_bill_from_user()
-            return self.admin()
-
-        else:
-            exit()
-
-    def add_category(self):
-        click.secho('Add category', fg='green')
-        category_name = click.prompt(click.style('Add category name', fg='yellow'), type=str)
-        category_description = click.prompt(click.style(
-                                text='Add category description (Not required)', fg='yellow'
-                                ), type=str, default='', show_default=False)
-
-        if (len(category_name.strip()) < 3):
-            click.secho('Error: Category name should be greater than 3 characters', fg='red')
-            return self.add_category()
-
-        confirm = click.confirm(click.style('Are you sure want to add this category?', fg='yellow', blink=True), default=True)
-        cursor = self.connection.cursor()
-        cursor.execute(add_category_query(category_name, category_description))
-        self.connection.commit()
-        click.secho(f"Added {category_name}", fg='blue')
-        self.list_all_categories()
-
-    def add_product(self):
-        click.secho('Add product', fg='green')
-
-        product_name = click.prompt(click.style('Product name ?', fg='yellow'), type=str)
-        if (len(product_name.strip()) < 3):
-            click.secho('Error: Product name should be greater than 3 characters', fg='red')
-            return self.add_product()
-
-        product_price = click.prompt(click.style('Price ?', fg='yellow' ), type=float)
-        self.list_all_categories()
-        category_id = click.prompt(click.style('Category ID ?', fg='yellow'), type=int)
-
-        confirm = click.confirm(click.style('Are you sure want to add this product?', fg='yellow', blink=True), default=True)
-        cursor = self.connection.cursor()
-        cursor.execute(add_product_query(product_name, product_price, category_id))
-        self.connection.commit()
-        click.secho(f"Added {product_name}", fg='blue')
-        self.list_all_products(category_id)
-
-    def get_all_bill_from_user(self):
-        self.get_all_user()
-        cursor = self.connection.cursor()
-        user_id = click.prompt(click.style('Enter the user_id to see its all bill', fg='yellow'), type=int)
-        cursor.execute(get_all_bill_by_user_query(user_id))
-        mytable = from_db_cursor(cursor)
-        mytable.title = f"Bill of user {user_id}"
-
-        print(mytable)
-
-    def clear_screen(self):
-        click.clear()
-        self.get_welcome_string()
-
-    def get_welcome_string(self):
-        welcome_string = 'Welcome to MyCart App'.center(shutil.get_terminal_size().columns)
-        click.secho(welcome_string, bold=True, fg='yellow', blink=True)
-        print('\n')
+class MyCart(DB_set_up, User, Product, Cart):
 
     def main(self):
-        if self.is_admin:
-            self.admin()
+        authentication_token = self.login()
+        if authentication_token:
+            self.user_id = authentication_token['user_id']
+            self.is_admin = authentication_token['is_admin']
+            user_name = authentication_token['user_name']
+            print_successful_login_message(user_name)
+
+            cart = Cart()
+
+            if self.is_admin:
+                self.admin_flow()
+            else:
+                self.customer_flow()
         else:
-            self.customer()
+            print_unsuccessful_login_message()
+            if retry():
+                clear_screen()
+                return self.main()
+            else:
+                quit()
+
 
 if __name__ == "__main__":
+    clear_screen()
     start = MyCart()
     start.main()
 

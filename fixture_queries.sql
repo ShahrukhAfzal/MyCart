@@ -7,7 +7,7 @@ INSERT INTO User (user_name, user_email, password, is_admin)
 VALUES ('customer-1', 'customer-1@gmail.com', '123456', false);
 
 INSERT INTO User (user_name, user_email, password, is_admin)
-VALUES ('customer-1', 'customer-2@gmail.com', '123456', false);
+VALUES ('customer-2', 'customer-2@gmail.com', '123456', false);
 
 
 -- create new categories
