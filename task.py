@@ -55,8 +55,13 @@ class DB_set_up:
 
 class User:
 
-    def login(self):
-        cursor = self.execute_query(get_login_query(get_username(), get_password()))
+    def login(self, username=None, password=None):
+        if not username:
+            username = get_username()
+        if not password:
+            password = get_password()
+
+        cursor = self.execute_query(get_login_query(username, password), get_dictionary=True)
         result = cursor.fetchone()
         return result
 
