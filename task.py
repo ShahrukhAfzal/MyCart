@@ -47,8 +47,6 @@ class DB_set_up:
                                                 database=DB_NAME
                                             )
 
-        self.create_all_table_if_not_exists()
-
     def create_all_table_if_not_exists(self):
         cursor = self.connection.cursor()
         cursor.execute(create_user_table)
@@ -406,6 +404,8 @@ class MyCart(DB_set_up, User, Product, Cart):
     def main(self):
         db_connection = MyCart.get_db_credentials()
         self.create_db_connection(**db_connection)
+        self.create_all_table_if_not_exists()
+
         authentication_token = self.login()
         if authentication_token:
             self.user_id = authentication_token['user_id']
