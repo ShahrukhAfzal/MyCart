@@ -42,10 +42,16 @@ class DB_set_up:
         DB_USER = kwargs.get('DB_USER')
         DB_PASSWORD = kwargs.get('DB_PASSWORD')
         DB_NAME = kwargs.get('DB_NAME')
-        self.connection = mysql.connector.connect(user=DB_USER,
-                                                password=DB_PASSWORD,
-                                                database=DB_NAME
-                                            )
+
+        if DB_NAME:
+            self.connection = mysql.connector.connect(user=DB_USER,
+                                                    password=DB_PASSWORD,
+                                                    database=DB_NAME
+                                                )
+        else:
+            self.connection = mysql.connector.connect(user=DB_USER,
+                                        password=DB_PASSWORD
+                                    )
 
     def create_all_table_if_not_exists(self):
         cursor = self.connection.cursor()
