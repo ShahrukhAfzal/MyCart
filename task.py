@@ -27,15 +27,27 @@ from database.cart_queries import (create_cart_query, get_cart_id_query,
 
 
 class DB_set_up:
-    def __init__(self):
-        self.create_db_connection()
-        self.create_all_table_if_not_exists()
 
-    def create_db_connection(self):
+    @staticmethod
+    def get_db_credentials():
+        db_credentials = {
+            'DB_USER': DB_USER,
+            'DB_PASSWORD': DB_PASSWORD,
+            'DB_NAME':DB_NAME
+        }
+
+        return db_credentials
+
+    def create_db_connection(self, **kwargs):
+        DB_USER = kwargs.get('DB_USER')
+        DB_PASSWORD = kwargs.get('DB_PASSWORD')
+        DB_NAME = kwargs.get('DB_NAME')
         self.connection = mysql.connector.connect(user=DB_USER,
                                                 password=DB_PASSWORD,
                                                 database=DB_NAME
                                             )
+
+        self.create_all_table_if_not_exists()
 
     def create_all_table_if_not_exists(self):
         cursor = self.connection.cursor()
@@ -392,6 +404,8 @@ class Cart:
 class MyCart(DB_set_up, User, Product, Cart):
 
     def main(self):
+        db_connection = MyCart.get_db_credentials()
+        self.create_db_connection(**db_connection)
         authentication_token = self.login()
         if authentication_token:
             self.user_id = authentication_token['user_id']
