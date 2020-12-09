@@ -43,14 +43,12 @@ class TestMyCart(MyCart):
         else:
             print(f"failed test_create_user admin={admin}")
 
-
     def test_create_categories(self):
         cursor = self.connection.cursor()
         category_test_data =  get_category_test_data()
         cursor.executemany(add_multiple_categories_query(), category_test_data)
         self.connection.commit()
         print('passed test_create_categories')
-
 
     def test_create_products(self):
         cursor = self.connection.cursor()
@@ -59,9 +57,24 @@ class TestMyCart(MyCart):
         self.connection.commit()
         print('passed test_create_products')
 
+    def test_list_all_categories(self):
+        self.list_all_categories()
+
+    def test_list_all_products(self):
+        self.list_all_products(category_id=1)
+        self.list_all_products(category_id=10)
+
+    def test_detail_product(self):
+        self.detail_product(product_id=1)
+        self.detail_product(product_id=2)
+        self.detail_product(product_id=30)
+
 
 test = TestMyCart()
 test.test_create_user(admin=True)
 test.test_create_user(admin=False)
 test.test_create_categories()
 test.test_create_products()
+test.test_list_all_categories()
+test.test_list_all_products()
+test.test_detail_product()
