@@ -1,3 +1,5 @@
+import click
+
 from task import MyCart
 
 from test_config import DB_USER, DB_PASSWORD, DB_NAME
@@ -8,7 +10,8 @@ from database.product_queries import (add_multiple_categories_query, add_multipl
 
 from utils import (get_user_test_data, get_category_test_data,
     get_products_test_data, get_add_to_cart_with_coupon_fixture,
-    get_add_to_cart_without_coupon_fixture, get_remove_from_cart_fixture)
+    get_add_to_cart_without_coupon_fixture, get_remove_from_cart_fixture,
+    clear_screen)
 
 
 class TestMyCart(MyCart):
@@ -28,8 +31,25 @@ class TestMyCart(MyCart):
             })
 
         print("creating new database connection")
+
         self.create_db_connection(**db_connection)
         self.create_all_table_if_not_exists()
+
+        self.test_create_user(admin=True)
+        self.test_create_user(admin=False)
+        self.test_create_categories()
+        self.test_create_products()
+        self.test_list_all_categories()
+        self.test_list_all_products()
+        self.test_detail_product()
+
+        self.test_add_to_cart_without_coupon()
+        self.test_add_to_cart_with_coupon()
+
+        self.test_remove_from_cart()
+        self.test_buy_from_cart()
+
+        click.secho("All the test cases have been successfully passed.", fg='cyan')
 
     def test_create_user(self, admin=False):
         user_data = get_user_test_data(admin)
@@ -76,35 +96,29 @@ class TestMyCart(MyCart):
         for item in products:
             self.add_to_cart(item['product_id'],  item['new_quantity'], item['user_id'])
 
-        test.view_cart(user_id=1)
+        self.view_cart(user_id=1)
 
     def test_add_to_cart_without_coupon(self):
         products = get_add_to_cart_without_coupon_fixture()
         for item in products:
             self.add_to_cart(item['product_id'],  item['new_quantity'], item['user_id'])
 
-        test.view_cart(user_id=1)
+        self.view_cart(user_id=1)
 
     def test_remove_from_cart(self):
         data = get_remove_from_cart_fixture()
         for each in data:
             self.remove_from_cart(**each)
 
-        test.view_cart(user_id=1)
+        self.view_cart(user_id=1)
 
-test = TestMyCart()
-test.test_create_user(admin=True)
-test.test_create_user(admin=False)
-test.test_create_categories()
-test.test_create_products()
-test.test_list_all_categories()
-test.test_list_all_products()
-test.test_detail_product()
+    def test_buy_from_cart(self):
+        self.buy_from_cart(ask_confirm=False, user_id=1)
 
-test.test_add_to_cart_without_coupon()
-test.test_add_to_cart_with_coupon()
 
-test.test_remove_from_cart()
+if __name__ == "__main__":
+    clear_screen()
+    TestMyCart()
 
 
 

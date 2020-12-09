@@ -366,7 +366,7 @@ class Cart:
         return 0
 
     def buy_from_cart(self, ask_confirm=True, confirm=True, user_id=None):
-        if user_id:
+        if not user_id:
             user_id = self.user_id
 
         total_amount = self.get_total_amount_of_cart(user_id)

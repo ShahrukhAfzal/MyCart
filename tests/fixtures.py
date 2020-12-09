@@ -133,5 +133,9 @@ remove_from_cart_fixture = [
     {
         'cart_id': 1,
         'product_id': 2
-    }
+    },
+    {
+        'cart_id': 1,
+        'product_id': 5
+    },
 ]

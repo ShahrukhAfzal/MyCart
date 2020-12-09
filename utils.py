@@ -74,13 +74,11 @@ def get_user_test_data(admin=False):
 
     return test_user
 
-
 def get_add_to_cart_with_coupon_fixture():
     return add_to_cart_fixture[:2]
 
 def get_add_to_cart_without_coupon_fixture():
     return add_to_cart_fixture[2:]
-
 
 def get_remove_from_cart_fixture():
     return remove_from_cart_fixture
