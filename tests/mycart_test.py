@@ -1,25 +1,67 @@
-from test_config import DB_USER, DB_PASSWORD, DB_NAME
-from database.tests_queries import (drop_db_query, create_db_query)
-
 from task import MyCart
+
+from test_config import DB_USER, DB_PASSWORD, DB_NAME
+
+from database.tests_queries import (drop_db_query, create_db_query)
+from database.user_query import create_user_query, get_login_query
+from database.product_queries import (add_multiple_categories_query, add_multiple_products_query)
+
+from utils import (get_user_test_data, get_category_test_data, get_products_test_data)
+
 
 class TestMyCart(MyCart):
 
     def __init__(self):
         db_connection = {'DB_USER': DB_USER, 'DB_PASSWORD': DB_PASSWORD}
+        print("creating database connection")
         self.create_db_connection(**db_connection)
-        print()
+
+        print("dropping old database")
         self.execute_query(drop_db_query(DB_NAME))
+
+        print("creating new database")
         self.execute_query(create_db_query(DB_NAME))
-        self.connection.close()
-        print(self.connection)
         db_connection.update({
-            'DB_NAME': DB_NAME
+                'DB_NAME': DB_NAME
             })
+
+        print("creating new database connection")
         self.create_db_connection(**db_connection)
         self.create_all_table_if_not_exists()
-        print(self.connection)
+
+    def test_create_user(self, admin=False):
+        user_data = get_user_test_data(admin)
+        self.execute_query(create_user_query(**user_data))
+        self.connection.commit()
+
+        cursor = self.execute_query(get_login_query(user_data['user_name'], user_data['password']))
+        cursor.fetchall()
+        rowcount = cursor.rowcount
+
+        if rowcount:
+            print(f"passed test_create_user admin={admin}")
+        else:
+            print(f"failed test_create_user admin={admin}")
+
+
+    def test_create_categories(self):
+        cursor = self.connection.cursor()
+        category_test_data =  get_category_test_data()
+        cursor.executemany(add_multiple_categories_query(), category_test_data)
+        self.connection.commit()
+        print('passed test_create_categories')
+
+
+    def test_create_products(self):
+        cursor = self.connection.cursor()
+        products_test_data = get_products_test_data()
+        cursor.executemany(add_multiple_products_query(), products_test_data)
+        self.connection.commit()
+        print('passed test_create_products')
 
 
 test = TestMyCart()
-
+test.test_create_user(admin=True)
+test.test_create_user(admin=False)
+test.test_create_categories()
+test.test_create_products()
