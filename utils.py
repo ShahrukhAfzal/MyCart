@@ -1,6 +1,7 @@
 import shutil
 import click
-from tests.fixtures import (categories_fixtures, products_fixtures, users_fixtures)
+from tests.fixtures import (categories_fixtures, products_fixtures,
+    users_fixtures, add_to_cart_fixture, remove_from_cart_fixture)
 
 WELCOME_MESSAGE = 'Welcome to MyCart App'
 UNSUCCESSFULL_LOGIN_MESASAGE = '!!! Wrong credentials. !!!'
@@ -65,7 +66,6 @@ def get_products_test_data():
 
     return data
 
-
 def get_user_test_data(admin=False):
     if admin:
         test_user = users_fixtures['admin_user'][0]
@@ -73,3 +73,14 @@ def get_user_test_data(admin=False):
         test_user = users_fixtures['customer_user'][0]
 
     return test_user
+
+
+def get_add_to_cart_with_coupon_fixture():
+    return add_to_cart_fixture[:2]
+
+def get_add_to_cart_without_coupon_fixture():
+    return add_to_cart_fixture[2:]
+
+
+def get_remove_from_cart_fixture():
+    return remove_from_cart_fixture

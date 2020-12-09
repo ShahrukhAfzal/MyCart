@@ -6,7 +6,9 @@ from database.tests_queries import (drop_db_query, create_db_query)
 from database.user_query import create_user_query, get_login_query
 from database.product_queries import (add_multiple_categories_query, add_multiple_products_query)
 
-from utils import (get_user_test_data, get_category_test_data, get_products_test_data)
+from utils import (get_user_test_data, get_category_test_data,
+    get_products_test_data, get_add_to_cart_with_coupon_fixture,
+    get_add_to_cart_without_coupon_fixture, get_remove_from_cart_fixture)
 
 
 class TestMyCart(MyCart):
@@ -69,6 +71,26 @@ class TestMyCart(MyCart):
         self.detail_product(product_id=2)
         self.detail_product(product_id=30)
 
+    def test_add_to_cart_with_coupon(self):
+        products = get_add_to_cart_with_coupon_fixture()
+        for item in products:
+            self.add_to_cart(item['product_id'],  item['new_quantity'], item['user_id'])
+
+        test.view_cart(user_id=1)
+
+    def test_add_to_cart_without_coupon(self):
+        products = get_add_to_cart_without_coupon_fixture()
+        for item in products:
+            self.add_to_cart(item['product_id'],  item['new_quantity'], item['user_id'])
+
+        test.view_cart(user_id=1)
+
+    def test_remove_from_cart(self):
+        data = get_remove_from_cart_fixture()
+        for each in data:
+            self.remove_from_cart(**each)
+
+        test.view_cart(user_id=1)
 
 test = TestMyCart()
 test.test_create_user(admin=True)
@@ -78,3 +100,11 @@ test.test_create_products()
 test.test_list_all_categories()
 test.test_list_all_products()
 test.test_detail_product()
+
+test.test_add_to_cart_without_coupon()
+test.test_add_to_cart_with_coupon()
+
+test.test_remove_from_cart()
+
+
+

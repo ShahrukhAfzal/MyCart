@@ -94,3 +94,44 @@ products_fixtures = [
         }
 
     ]
+
+
+add_to_cart_fixture = [
+        {
+        'product_id': 1,
+        'new_quantity': 1,
+        'user_id': 1
+        },
+        {
+        'product_id': 2,
+        'new_quantity': 1,
+        'user_id': 1
+        },
+        {
+        'product_id': 4,
+        'new_quantity': 20,
+        'user_id': 1
+        },
+        {
+        'product_id': 5,
+        'new_quantity': 10,
+        'user_id': 1
+        },
+        {
+        'product_id': 6,
+        'new_quantity': 1,
+        'user_id': 1
+        }
+    ]
+
+
+remove_from_cart_fixture = [
+    {
+        'cart_id': 1,
+        'product_id': 1
+    },
+    {
+        'cart_id': 1,
+        'product_id': 2
+    }
+]
