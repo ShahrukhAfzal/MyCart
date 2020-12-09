@@ -1,5 +1,7 @@
 import shutil
 import click
+from tests.fixtures import (categories_fixtures, products_fixtures,
+    users_fixtures, add_to_cart_fixture, remove_from_cart_fixture)
 
 WELCOME_MESSAGE = 'Welcome to MyCart App'
 UNSUCCESSFULL_LOGIN_MESASAGE = '!!! Wrong credentials. !!!'
@@ -45,3 +47,38 @@ def get_choice(choice_list):
 
     return click.prompt(click.style(choice_message, fg='yellow'), prompt_suffix=choice_option_string, type=int)
 
+"""
+used in testing
+"""
+def get_category_test_data():
+    data = list()
+    for row in categories_fixtures:
+        obj = (row['category_id'], row['category_name'], row['category_description'])
+        data.append(obj)
+
+    return data
+
+def get_products_test_data():
+    data = list()
+    for row in products_fixtures:
+        obj = (row['product_id'], row['product_name'], row['product_price'], row['category_id'])
+        data.append(obj)
+
+    return data
+
+def get_user_test_data(admin=False):
+    if admin:
+        test_user = users_fixtures['admin_user'][0]
+    else:
+        test_user = users_fixtures['customer_user'][0]
+
+    return test_user
+
+def get_add_to_cart_with_coupon_fixture():
+    return add_to_cart_fixture[:2]
+
+def get_add_to_cart_without_coupon_fixture():
+    return add_to_cart_fixture[2:]
+
+def get_remove_from_cart_fixture():
+    return remove_from_cart_fixture

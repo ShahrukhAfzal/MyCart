@@ -206,7 +206,6 @@ class Product:
         else:
             cursor.fetchone()
             click.secho("\n\nNo Product exist for this category.\n\n", fg='red')
-            return self.main()
 
     def detail_product(self, product_id):
         cursor = self.execute_query(get_product_detail_query(product_id))
@@ -266,19 +265,22 @@ class Product:
 
 class Cart:
 
-    def add_to_cart(self, product_id, new_quantity=None):
+    def add_to_cart(self, product_id, new_quantity=None, user_id=None):
         if not new_quantity:
             prompt_suffix = "(default is" + click.style(" 1", fg='magenta') + ')\t'
             new_quantity = click.prompt("Quantity???", type=int, default=1,
                             show_default=False, prompt_suffix=prompt_suffix)
 
-        cursor = self.execute_query(get_cart_id_query(self.user_id), get_dictionary=True)
+        if not user_id:
+            user_id = self.user_id
+
+        cursor = self.execute_query(get_cart_id_query(user_id), get_dictionary=True)
         result = cursor.fetchone()
         if result:
             cart_id = result['cart_id']
         else:
             #create a cart for the user if not exist
-            cursor = self.execute_query(create_cart_query(self.user_id))
+            cursor = self.execute_query(create_cart_query(user_id))
             self.connection.commit()
             cart_id = cursor.lastrowid
 
@@ -363,8 +365,11 @@ class Cart:
 
         return 0
 
-    def buy_from_cart(self, ask_confirm=True, confirm=True):
-        total_amount = self.get_total_amount_of_cart(self.user_id)
+    def buy_from_cart(self, ask_confirm=True, confirm=True, user_id=None):
+        if not user_id:
+            user_id = self.user_id
+
+        total_amount = self.get_total_amount_of_cart(user_id)
         discounted_amount = self.get_discounted_amount(total_amount)
 
         if ask_confirm:
@@ -372,13 +377,13 @@ class Cart:
             if not confirm:
                 return self.customer_flow()
 
-        self.execute_query(buy_from_cart_query(self.user_id, total_amount, discounted_amount))
+        self.execute_query(buy_from_cart_query(user_id, total_amount, discounted_amount))
         self.connection.commit()
 
         cursor = self.execute_query(get_last_insert_id())
         order_id = cursor.fetchone()[0]
 
-        cursor = self.execute_query(get_order_details_query(self.user_id))
+        cursor = self.execute_query(get_order_details_query(user_id))
         all_rows = cursor.fetchall()
         data_to_be_inserted = list()
 
