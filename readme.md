@@ -84,4 +84,15 @@ $ python3 task.py
 ```
 Now the app is ready to use.
 
-###### Hope you like it.
+## Tests cases:
+There is a file called mycart_test.py.
+Simply run it after creating a user.
+```
+$ python3 tests/mycart_test.py
+```
+It will go through all the test cases.
+
+
+###### Hope you like it, Thanks.
+##### If you have any question/suggestion please feel free to ask.
+### Connect me on [linkedIn](https://www.linkedin.com/in/shahrukhafzal/)
